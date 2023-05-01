@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import { Contract, providers, utils } from "ethers";
+import { providers,Contract, utils } from "ethers";
 import Web3Modal from "web3modal";
 import styles from "../styles/Home.module.css";
 import { NFT_CONTRACT_ABI,NFT_CONTRACT_ADDRESS } from '@/constants';
+import { render } from 'react-dom';
 
-
-export default function Home() {
+export default function Home(props) {
     const [isOwner, setIsOwner] =useState(false);
     const [ presaleStarted, setPresaleStarted ] = useState(false);
     const [ presaleEnded, setPresaleEnded ] = useState(false);
@@ -21,11 +21,11 @@ export default function Home() {
 
         const nftContract = new Contract(NFT_CONTRACT_ADDRESS,NFT_CONTRACT_ABI,signer);
 
-        const tx = await nftContract.presaleMint({
+        const txn = await nftContract.presaleMint({
           value: utils.parseEther("0.01")
         });
         setLoading(true);
-        await tx.wait();
+        await txn.wait();
         setLoading(false);
         window.alert("You Successfully minted a SpiderVerse");
 
@@ -41,17 +41,18 @@ export default function Home() {
 
         const nftContract = new Contract(NFT_CONTRACT_ADDRESS,NFT_CONTRACT_ABI,signer);
 
-        const tx = await nftContract.mint({
+        const txn = await nftContract.mint({
           value: utils.parseEther("0.015")
         });
         setLoading(true);
-        await tx.wait();
+        await txn.wait();
         setLoading(false);
         window.alert("You Successfully minted a SpiderVerse");
 
       } catch (error) {
         console.log(error);
       }
+      setLoading(false);
     };
 
     const connectWallet = async() => {
@@ -69,16 +70,17 @@ export default function Home() {
         const signer = await getProviderOrSigner(true);
         const nftContract = new Contract(NFT_CONTRACT_ADDRESS,NFT_CONTRACT_ABI,signer);
 
-        const tx = await nftContract.startPresale();
-
+        const txn = await nftContract.startPresale();
         setLoading(true);
-        await tx.wait();
+        await txn.wait();
         setLoading(false);
         
+        setPresaleStarted(true);
         await checkIfPresaleStarted();
       } catch (error) {
         console.error(error)        
       }
+      setLoading(false);
     };
 
     const getNumMintedTokens = async () => {
@@ -142,16 +144,14 @@ export default function Home() {
 
     const getOwner = async() => {
       try {
-        const provider = await getProviderOrSigner();
+        const signer = await getProviderOrSigner(true);
         const nftContract = new Contract(
           NFT_CONTRACT_ADDRESS,
           NFT_CONTRACT_ABI,
-          provider
+          signer
         );
-
+          
         const _owner = await nftContract.owner();
-        const signer = await getProviderOrSigner(true);
-      
         const userAddress = await signer.getAddress();
 
         if ( userAddress.toLowerCase() === _owner.toLowerCase() ){
@@ -165,7 +165,7 @@ export default function Home() {
 
     const getProviderOrSigner = async(needSigner = false) => {
       const provider = await web3ModalRef.current.connect();
-      const web3Provider = new providers.Web3Provider(provider);
+      const web3Provider = new providers.Web3Provider(provider)
       
       //Checking if user is connected to Sepolia Testnet, tell them to switch to Sepolia
       const {chainId} = await web3Provider.getNetwork();
@@ -191,19 +191,19 @@ export default function Home() {
 
       await getNumMintedTokens();
 
-      // const presaleEndedInterval = setInterval(async function () {
-      //   const _presaleStarted = await checkIfPresaleStarted();
-      //   if (_presaleStarted) {
-      //     const _presaleEnded = await checkIfPresaleEnded();
-      //     if (_presaleEnded) {
-      //       clearInterval(presaleEndedInterval);
-      //     }
-      //   }
-      // }, 5 * 1000);
+      const presaleEndedInterval = setInterval(async function () {
+        const _presaleStarted = await checkIfPresaleStarted();
+        if (_presaleStarted) {
+          const _presaleEnded = await checkIfPresaleEnded();
+          if (_presaleEnded) {
+            clearInterval(presaleEndedInterval);
+          }
+        }
+      }, 5 * 1000);
 
-      // setInterval(async function(){
-      //   await getNumMintedTokens();
-      // },5*1000);
+      setInterval(async function(){
+        await getNumMintedTokens();
+      },5*1000);
 
     };
 
@@ -216,18 +216,10 @@ export default function Home() {
         });
 
         onPageLoad();
-
-      const _presaleStarted = checkIfPresaleStarted();
-      if(_presaleStarted){
-        checkIfPresaleEnded();
-      }
-      getNumMintedTokens();
-
-    
       }
     }, [walletConnected]);
 
-    const renderButton = () => {
+    function renderBody() {
       if(!walletConnected){
         return (
           <button onClick={connectWallet} className={styles.button}>
@@ -312,15 +304,14 @@ export default function Home() {
             Total Minted - <b>{numTokensMinted}/20</b>
           </div>
 
-          {renderButton()}
+          {renderBody()}
         </div>
         <img className={styles.image} src="/spiderverse/spiderman3.svg" />
-        
       </div>
       <footer className={styles.footer}>
       <b>Crafted with &#10084; by Sourabh</b>
       </footer>
 
     </div>
-  );
+  )
 }
