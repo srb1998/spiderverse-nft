@@ -260,9 +260,9 @@ export default function Home(props) {
         //Only WL addresses can mint 
         return (
           <div>
-            <span className={styles.description}>
+            <div className={styles.description}>
               Whitelist Phase has started!
-            </span>
+            </div>
             <button  onClick={presaleMint} className={styles.button}>
               Mint 🚀
             </button>
